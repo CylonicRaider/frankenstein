@@ -1,0 +1,17 @@
+{
+  "name": "frankenstein",
+  "version": "0.1.0",
+  "description": "Frankenstein tears up files and stiches them back together.",
+  "main": "index.js",
+  "bin": "./cli.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://CylonicRaider@github.com/CylonicRaider/frankenstein.git"
+  },
+  "author": "CylonicRaider",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/CylonicRaider/frankenstein/issues"
+  },
+  "homepage": "https://github.com/CylonicRaider/frankenstein#readme"
+}
