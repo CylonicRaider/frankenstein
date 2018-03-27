@@ -4,12 +4,16 @@
 const fs = require('fs');
 const path = require('path');
 
+const units = require('./lib/units.js');
+
 /* Configuration / data file */
 class Configuration {
 
   constructor(path) {
     this.path = path;
     this.data = null;
+    this._rawBlocksize = null;
+    this._blocksize = null;
   }
 
   create() {
@@ -24,6 +28,26 @@ class Configuration {
 
   save() {
     fs.writeFileSync(this.path, JSON.stringify(this.data, null, 2));
+  }
+
+  get dirs() {
+    if (Array.isArray(this.data.dirs)) {
+      return this.data.dirs;
+    } else {
+      return [this.data.dirs];
+    }
+  }
+
+  get blocksize() {
+    if (this.data.blocksize !== this._rawBlocksize) {
+      this._rawBlocksize = this.data.blocksize;
+      if (typeof this._rawBlocksize === 'number') {
+        this._blocksize = this._rawBlocksize;
+      } else {
+        this._blocksize = units.parse(this._rawBlocksize);
+      }
+    }
+    return this._blocksize;
   }
 
 }
