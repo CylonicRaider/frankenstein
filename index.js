@@ -56,7 +56,7 @@ class Configuration {
 function splitFile(source, destPrefix, blocksize, callback) {
   let counter = 1;
   const finish = (err) => {
-    if (err !== null) return callback(err);
+    if (err != null) return callback(err);
     fs.unlink(source, callback);
   };
   fs.createReadStream(source).pipe(new SplitStream(blocksize, () => {
@@ -67,22 +67,22 @@ function splitFile(source, destPrefix, blocksize, callback) {
 function recombineFile(sourcePrefix, dest, callback) {
   let counter = 1;
   const finish = (err) => {
-    if (err != null) callback(err);
+    if (err != null) return callback(err);
     let pending = counter;
     for (let i = 1; i <= counter; i++) {
       fs.unlink(sourcePrefix + '.' + i, (err) => {
         if (err !== null) callback(err);
-        if (--pending == 0) callback();
+        if (--pending === 0) callback();
       });
     }
-    if (pending == 0) callback();
+    if (pending === 0) callback();
   };
   new GatherStream(() => {
     const file = sourcePrefix + '.' + counter;
     try {
       fs.statSync(file);
     } catch (e) {
-      if (e.code != 'ENOENT') callback(e);
+      if (e.code !== 'ENOENT') callback(e);
       return null;
     }
     counter++;
