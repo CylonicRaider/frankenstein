@@ -53,29 +53,56 @@ class Configuration {
 
 }
 
+/* Partition a single file
+ *
+ * source is the path of the file to decompose. destPrefix is the
+ * prefix of the output files, it gets sequentially increasing integers
+ * appended after a dot (.) character. blocksize is the maximal size
+ * of an output file (in bytes). callback is invoked with any errors
+ * that occur during the process, as well as with a Boolean indicating
+ * whether the operation succeeded or not.
+ *
+ * Upon completion, the source file is unlinked. */
 function splitFile(source, destPrefix, blocksize, callback) {
   let counter = 1;
   const finish = (err) => {
-    if (err != null) return callback(err);
-    fs.unlink(source, callback);
+    if (err != null) {
+      callback(err);
+      return callback(false);
+    }
+    fs.unlink(source, (err) => {
+      if (err != null) callback(err);
+      callback(true);
+    });
   };
   fs.createReadStream(source).pipe(new SplitStream(blocksize, () => {
     fs.createWriteStream(destPrefix + '.' + (counter++));
   })).on('finish', finish).on('error', finish);
 }
 
+/* Undo the partitioning of a single file
+ *
+ * sourcePrefix is the prefix of the input file (see the destPrefix
+ * parameter of splitFile()); dest is the path of the output file; callback
+ * gets invoked with any error that occurs during the operation, as well as
+ * with a Boolean indicating whether the operation succeeded or not.
+ *
+ * Upon completion, the source files are unlinked. */
 function recombineFile(sourcePrefix, dest, callback) {
   let counter = 1;
   const finish = (err) => {
-    if (err != null) return callback(err);
+    if (err != null) {
+      callback(err);
+      return callback(false);
+    }
     let pending = counter;
     for (let i = 1; i <= counter; i++) {
       fs.unlink(sourcePrefix + '.' + i, (err) => {
         if (err !== null) callback(err);
-        if (--pending === 0) callback();
+        if (--pending === 0) callback(true);
       });
     }
-    if (pending === 0) callback();
+    if (pending === 0) callback(true);
   };
   new GatherStream(() => {
     const file = sourcePrefix + '.' + counter;
