@@ -190,10 +190,17 @@ function split(config, options, callback) {
     callback = options;
     options = {};
   }
+  const maybeFinish = (data) => {
+    if (data === null && options.verbose)
+      console.log('Done');
+    callback(data);
+  };
   const toSplit = [];
   locateLargeFiles(config.dirs, config.blocksize, (file, suffix) => {
     if (file === null) {
-      const wg = waitgroup(toSplit.length);
+      if (options.verbose)
+        console.log('Splitting files...');
+      const wg = waitgroup(toSplit.length, maybeFinish);
       toSplit.forEach((entry) => {
         const file = entry[0], suffix = entry[1];
         splitFile(file, file + suffix, config.blocksize, (res) => {
@@ -214,7 +221,7 @@ function split(config, options, callback) {
           }
         });
       });
-      if (toSplit.length === 0) callback(null);
+      if (toSplit.length === 0) maybeFinish(null);
     } else if (typeof file === 'string') {
       toSplit.push([file, suffix]);
     } else {
@@ -232,8 +239,15 @@ function recombine(config, options, callback) {
     callback = options;
     options = {};
   }
+  if (options.verbose)
+    console.log('Recombining files...');
+  const maybeFinish = (data) => {
+    if (data === null && options.verbose)
+      console.log('Done');
+    callback(data);
+  };
   const files = Object.keys(config.data.expanded);
-  const wg = waitgroup(files.length);
+  const wg = waitgroup(files.length, maybeFinish);
   files.forEach((k) => {
     const v = config.data.expanded[k];
     recombineFile(k + v.suffix, k, (res) => {
@@ -255,7 +269,7 @@ function recombine(config, options, callback) {
       }
     });
   });
-  if (files.length === 0) callback(null);
+  if (files.length === 0) maybeFinish(null);
 }
 
 module.exports.Configuration = Configuration;

@@ -38,14 +38,23 @@ function do_init(options) {
   } catch (e) {
     if (e.code !== 'ENOENT') throw e;
   }
+  if (options.verbose)
+    console.log('Creating configuration...');
   make_config(options, true).save();
+  if (options.verbose)
+    console.log('Done');
 }
 
 function do_split(options) {
   const config = make_config(options);
+  let exitCode = 0;
   frankenstein.split(config, {verbose: options.verbose}, (res) => {
-    if (res === null && options.verbose)
-      console.log('Done');
+    if (res !== null) {
+      exitCode = 1;
+    } else {
+      config.save();
+      process.exit(exitCode);
+    }
   });
 }
 
@@ -56,9 +65,14 @@ function do_recombine(options) {
     return 1;
   }
   const config = make_config(options);
+  let exitCode = 0;
   frankenstein.recombine(config, {verbose: options.verbose}, (res) => {
-    if (res === null && options.verbose)
-      console.log('Done');
+    if (res !== null) {
+      exitCode = 1;
+    } else {
+      config.save();
+      process.exit(exitCode);
+    }
   });
 }
 
