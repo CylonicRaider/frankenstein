@@ -1,2 +1,5 @@
 # Ignore NPM stuff
 node_modules
+
+# Own stuff
+.frankenstein
