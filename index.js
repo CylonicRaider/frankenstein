@@ -4,8 +4,10 @@
 const fs = require('fs');
 const path = require('path');
 
+const filewalk = require('./lib/filewalk.js');
 const { GatherStream, SplitStream } = require('./lib/scattergather.js');
 const units = require('./lib/units.js');
+const { escapeRegexInner } = require('./lib/util.js');
 
 /* Configuration / data file */
 class Configuration {
@@ -51,6 +53,48 @@ class Configuration {
     return this._blocksize;
   }
 
+}
+
+/* Locate the files among/inside dirs that are larger than blocksize
+ *
+ * dirs is an array of files or directories; files are checked directly,
+ * directories are scanned recursively. blocksize is the minimum size for a
+ * file to have to be reported. callback gets called with two arguments for
+ * each found file, its path and a a suffix to (directly) append to it to
+ * obtain a prefix for use with splitFile() such that no collisions with
+ * other files occur; additionally, callback is called with any error that
+ * occurs (as a single argument), and a single null argument once all files
+ * are handled. */
+function locateLargeFiles(dirs, blocksize, callback, verbose = false) {
+  const func = verbose ? filewalk.filewalk : filewalk.verboseFilewalk;
+  func(dirs, (file, stats) => {
+    return stats.isFile() && stats.size > blocksize;
+  }, (file, listing) => {
+    if (file === null) {
+      callback(null);
+    } else if (typeof file === 'string') {
+      if (listing === dirs) {
+        try {
+          listing = fs.readdirSync(path.dirname(file));
+        } catch (e) {
+          callback(e);
+          return;
+        }
+      }
+      /* Locate a suffix that does not collide with any other files */
+      let suffix = '.fr';
+      const baseRE = escapeRegexInner(file);
+      for (let counter = 1;; suffix = '.fr' + (counter++)) {
+        const re = new RegExp('^' + baseRE + escapeRegexInner(suffix) +
+                              '\\.[0-9]+$');
+        if (! listing.some(re.test)) break;
+      }
+      /* Done */
+      callback(file, file + suffix);
+    } else {
+      callback(file);
+    }
+  });
 }
 
 /* Partition a single file
