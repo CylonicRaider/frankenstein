@@ -73,6 +73,7 @@ function locateLargeFiles(dirs, blocksize, callback, verbose = false) {
     if (file === null) {
       callback(null);
     } else if (typeof file === 'string') {
+      /* The original argument is not necessarily a directory listing */
       if (listing === dirs) {
         try {
           listing = fs.readdirSync(path.dirname(file));
