@@ -7,7 +7,7 @@ const path = require('path');
 const filewalk = require('./lib/filewalk.js');
 const { GatherStream, SplitStream } = require('./lib/scattergather.js');
 const units = require('./lib/units.js');
-const { escapeRegexInner } = require('./lib/util.js');
+const { escapeRegexInner, waitgroup } = require('./lib/util.js');
 
 /* Configuration / data file */
 class Configuration {
@@ -30,7 +30,7 @@ class Configuration {
       this.data = JSON.parse(rawData);
       return true;
     } catch (e) {
-      if (! create || e instanceof SyntaxError || e.code != 'ENOENT')
+      if (! create || e instanceof SyntaxError || e.code !== 'ENOENT')
         throw e;
       this.create();
       return false;
@@ -148,14 +148,13 @@ function recombineFile(sourcePrefix, dest, callback) {
       callback(err);
       return callback(false);
     }
-    let pending = counter;
+    const wg = waitgroup(counter, callback);
     for (let i = 1; i <= counter; i++) {
       fs.unlink(sourcePrefix + '.' + i, (err) => {
-        if (err !== null) callback(err);
-        if (--pending === 0) callback(true);
+        if (err != null) callback(err);
+        wg(true);
       });
     }
-    if (pending === 0) callback(true);
   };
   new GatherStream(() => {
     const file = sourcePrefix + '.' + counter;
