@@ -1,7 +1,7 @@
 {
   "name": "frankenstein",
   "version": "0.1.0",
-  "description": "Frankenstein tears up files and stiches them back together.",
+  "description": "Frankenstein rips files apart and stiches them back together.",
   "main": "index.js",
   "bin": "./cli.js",
   "repository": {

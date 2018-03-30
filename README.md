@@ -1,3 +1,3 @@
 # frankenstein
 
-Frankenstein tears up files and stiches them back together.
+Frankenstein rips files apart and stiches them back together.
