@@ -13,5 +13,8 @@
   "bugs": {
     "url": "https://github.com/CylonicRaider/frankenstein/issues"
   },
-  "homepage": "https://github.com/CylonicRaider/frankenstein#readme"
+  "homepage": "https://github.com/CylonicRaider/frankenstein#readme",
+  "dependencies": {
+    "minimist": "^1.2.0"
+  }
 }
