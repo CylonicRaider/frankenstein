@@ -20,13 +20,21 @@ class Configuration {
   }
 
   create() {
-    this.data = {dirs: path.resolve(path.dirname(this.path)), blocksize: '16M'};
+    this.data = {dirs: path.resolve(path.dirname(this.path)),
+                 blocksize: '16M'};
   }
 
-  load() {
-    const rawData = fs.readFileSync(this.path, 'utf-8');
-    const data = JSON.parse(rawData);
-    this.data = data;
+  load(create = false) {
+    try {
+      const rawData = fs.readFileSync(this.path, 'utf-8');
+      this.data = JSON.parse(rawData);
+      return true;
+    } catch (e) {
+      if (! create || e instanceof SyntaxError || e.code != 'ENOENT')
+        throw e;
+      this.create();
+      return false;
+    }
   }
 
   save() {
