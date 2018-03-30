@@ -20,7 +20,7 @@ class Configuration {
   }
 
   create() {
-    this.data = {dirs: path.resolve(this.path), blocksize: '16M'};
+    this.data = {dirs: path.resolve(path.dirname(this.path)), blocksize: '16M'};
   }
 
   load() {
