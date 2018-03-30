@@ -17,11 +17,12 @@ class Configuration {
     this.data = null;
     this._rawBlocksize = null;
     this._blocksize = null;
+    this._saveScheduled = false;
   }
 
   create() {
     this.data = {dirs: path.resolve(path.dirname(this.path)),
-                 blocksize: '16M'};
+                 blocksize: '16M', expanded: {}};
   }
 
   load(create = false) {
@@ -39,6 +40,15 @@ class Configuration {
 
   save() {
     fs.writeFileSync(this.path, JSON.stringify(this.data, null, 2));
+  }
+
+  scheduleSave() {
+    if (this._saveScheduled) return;
+    setTimeout(() => {
+      this.save();
+      this._saveScheduled = false;
+    }, 0);
+    this._saveScheduled = true;
   }
 
   get dirs() {
@@ -99,7 +109,7 @@ function locateLargeFiles(dirs, blocksize, callback, verbose = false) {
         if (! listing.some(re.test)) break;
       }
       /* Done */
-      callback(file, file + suffix);
+      callback(file, suffix);
     } else {
       callback(file);
     }
@@ -169,3 +179,86 @@ function recombineFile(sourcePrefix, dest, callback) {
   }).pipe(fs.createWriteStream(dest)).on('finish', finish)
     .on('error', finish);
 }
+
+/* Split up files as given by the configuration
+ *
+ * options is an object which may have a "verbose" property with a truthy
+ * value to enable verbose output; or it can be omitted. callback is called
+ * with no arguments when done, and with any errors that occur. */
+function split(config, options, callback) {
+  if (typeof options === 'function') {
+    callback = options;
+    options = {};
+  }
+  const toSplit = [];
+  locateLargeFiles(config.dirs, config.blocksize, (file, suffix) => {
+    if (file === null) {
+      const wg = waitgroup(toSplit.length);
+      toSplit.forEach((entry) => {
+        const file = entry[0], suffix = entry[1];
+        splitFile(file, file + suffix, config.blocksize, (res) => {
+          if (typeof res === 'boolean') {
+            if (res) {
+              config.data.expanded[file] = {suffix: suffix};
+              config.scheduleSave();
+              if (options.verbose)
+                console.log(file + ': OK');
+            } else {
+              if (options.verbose)
+                console.log(file + ': FAIL (see error messages above)');
+            }
+            wg(null);
+          } else {
+            if (options.verbose) console.error('ERROR:', res);
+            callback(res);
+          }
+        });
+      });
+    } else if (typeof file === 'string') {
+      toSplit.push([file, suffix]);
+    } else {
+      if (options.verbose) console.error('ERROR:', file);
+      callback(file);
+    }
+  }, options.verbose);
+}
+
+/* Restore split-up files as given by the configuration
+ *
+ * See split() for details about the parameters. */
+function recombine(config, options, callback) {
+  if (typeof options === 'function') {
+    callback = options;
+    options = {};
+  }
+  const files = Object.ownPropertyNames(config.data.expanded);
+  const wg = waitgroup(files.length);
+  files.forEach((k) => {
+    const v = config.data.expanded[k];
+    recombineFile(k + v.suffix, k, (res) => {
+      if (typeof res === 'boolean') {
+        if (res) {
+          delete config.data.expanded[k];
+          config.scheduleSave();
+          if (options.verbose)
+            console.log(k + ': OK');
+        } else {
+          if (options.verbose)
+            console.log(k + ': FAIL (see error messages above)');
+        }
+        wg(null);
+      } else {
+        if (options.verbose)
+          console.log('ERROR:', res);
+        callback(res);
+      }
+    });
+  });
+}
+
+module.exports.Configuration = Configuration;
+module.exports.locateLargeFiles = locateLargeFiles;
+module.exports.splitFile = splitFile;
+module.exports.recombineFile = recombineFile;
+module.exports.split = split;
+module.exports.recombine = recombine;
