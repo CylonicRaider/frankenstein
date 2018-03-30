@@ -84,7 +84,7 @@ class Configuration {
  * occurs (as a single argument), and a single null argument once all files
  * are handled. */
 function locateLargeFiles(dirs, blocksize, callback, verbose = false) {
-  const func = verbose ? filewalk.filewalk : filewalk.verboseFilewalk;
+  const func = verbose ? filewalk.verboseFilewalk : filewalk.filewalk;
   func(dirs, (file, stats) => {
     return stats.isFile() && stats.size > blocksize;
   }, (file, listing) => {
@@ -214,6 +214,7 @@ function split(config, options, callback) {
           }
         });
       });
+      if (toSplit.length === 0) callback(null);
     } else if (typeof file === 'string') {
       toSplit.push([file, suffix]);
     } else {
@@ -231,7 +232,7 @@ function recombine(config, options, callback) {
     callback = options;
     options = {};
   }
-  const files = Object.ownPropertyNames(config.data.expanded);
+  const files = Object.keys(config.data.expanded);
   const wg = waitgroup(files.length);
   files.forEach((k) => {
     const v = config.data.expanded[k];
@@ -254,6 +255,7 @@ function recombine(config, options, callback) {
       }
     });
   });
+  if (files.length === 0) callback(null);
 }
 
 module.exports.Configuration = Configuration;
