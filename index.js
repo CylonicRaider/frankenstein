@@ -106,7 +106,7 @@ function locateLargeFiles(dirs, blocksize, callback, verbose = false) {
       for (let counter = 1;; suffix = '.fr' + (counter++)) {
         const re = new RegExp('^' + baseRE + escapeRegexInner(suffix) +
                               '\\.[0-9]+$');
-        if (! listing.some(re.test)) break;
+        if (! listing.some(re.test, re)) break;
       }
       /* Done */
       callback(file, suffix);
@@ -139,7 +139,7 @@ function splitFile(source, destPrefix, blocksize, callback) {
     });
   };
   fs.createReadStream(source).pipe(new SplitStream(blocksize, () => {
-    fs.createWriteStream(destPrefix + '.' + (counter++));
+    return fs.createWriteStream(destPrefix + '.' + (counter++));
   })).on('finish', finish).on('error', finish);
 }
 
@@ -158,8 +158,8 @@ function recombineFile(sourcePrefix, dest, callback) {
       callback(err);
       return callback(false);
     }
-    const wg = waitgroup(counter, callback);
-    for (let i = 1; i <= counter; i++) {
+    const wg = waitgroup(counter - 1, callback);
+    for (let i = 1; i < counter; i++) {
       fs.unlink(sourcePrefix + '.' + i, (err) => {
         if (err != null) callback(err);
         wg(true);
