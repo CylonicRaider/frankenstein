@@ -123,7 +123,8 @@ function locateLargeFiles(dirs, blocksize, callback, verbose = false) {
  * appended after a dot (.) character. blocksize is the maximal size
  * of an output file (in bytes). callback is invoked with any errors
  * that occur during the process, as well as with a Boolean indicating
- * whether the operation succeeded or not.
+ * whether the operation succeeded or not; if the result is successful, the
+ * file's access bits are passed as a second argument.
  *
  * Upon completion, the source file is unlinked. */
 function splitFile(source, destPrefix, blocksize, callback) {
@@ -133,9 +134,15 @@ function splitFile(source, destPrefix, blocksize, callback) {
       callback(err);
       return callback(false);
     }
-    fs.unlink(source, (err) => {
-      if (err != null) callback(err);
-      callback(true);
+    fs.stat(source, (err, stats) => {
+      if (err != null) {
+        callback(err);
+        return callback(false);
+      }
+      fs.unlink(source, (err) => {
+        if (err != null) callback(err);
+        callback(true, stats.mode & 511); // 0777
+      });
     });
   };
   fs.createReadStream(source).pipe(new SplitStream(blocksize, () => {
@@ -146,12 +153,17 @@ function splitFile(source, destPrefix, blocksize, callback) {
 /* Undo the partitioning of a single file
  *
  * sourcePrefix is the prefix of the input file (see the destPrefix
- * parameter of splitFile()); dest is the path of the output file; callback
- * gets invoked with any error that occurs during the operation, as well as
- * with a Boolean indicating whether the operation succeeded or not.
+ * parameter of splitFile()); dest is the path of the output file; mode is an
+ * optional file creation mode (as a number); callback gets invoked with any
+ * error that occurs during the operation, as well as with a Boolean
+ * indicating whether the operation succeeded or not.
  *
  * Upon completion, the source files are unlinked. */
-function recombineFile(sourcePrefix, dest, callback) {
+function recombineFile(sourcePrefix, dest, mode, callback) {
+  if (typeof mode === 'function') {
+    callback = mode;
+    mode = 438; // 0666
+  }
   let counter = 1;
   const finish = (err) => {
     if (err != null) {
@@ -176,7 +188,7 @@ function recombineFile(sourcePrefix, dest, callback) {
     }
     counter++;
     return fs.createReadStream(file);
-  }).pipe(fs.createWriteStream(dest)).on('finish', finish)
+  }).pipe(fs.createWriteStream(dest, {mode: mode})).on('finish', finish)
     .on('error', finish);
 }
 
@@ -203,10 +215,10 @@ function split(config, options, callback) {
       const wg = waitgroup(toSplit.length, maybeFinish);
       toSplit.forEach((entry) => {
         const file = entry[0], suffix = entry[1];
-        splitFile(file, file + suffix, config.blocksize, (res) => {
+        splitFile(file, file + suffix, config.blocksize, (res, mode) => {
           if (typeof res === 'boolean') {
             if (res) {
-              config.data.expanded[file] = {suffix: suffix};
+              config.data.expanded[file] = {suffix: suffix, mode: mode};
               config.scheduleSave();
               if (options.verbose)
                 console.log(file + ': OK');
@@ -250,7 +262,7 @@ function recombine(config, options, callback) {
   const wg = waitgroup(files.length, maybeFinish);
   files.forEach((k) => {
     const v = config.data.expanded[k];
-    recombineFile(k + v.suffix, k, (res) => {
+    recombineFile(k + v.suffix, k, v.mode, (res) => {
       if (typeof res === 'boolean') {
         if (res) {
           delete config.data.expanded[k];
