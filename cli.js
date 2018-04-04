@@ -11,8 +11,29 @@ const frankenstein = require('./index.js');
 
 function usage(code = 2) {
   process.stderr.write('USAGE: frankenstein [-c|--config config] ' +
-    '[-b|--block blocksize] [-v|--verbose] init|rip|stitch [dir ...]\n');
-  process.exit(code);
+    '[-b|--block blocksize] [-v|--verbose] help|init|rip|stitch ' +
+    '[dir ...]\n');
+  if (code !== null) process.exit(code);
+}
+
+function help(code = 0) {
+  usage(null);
+  process.stderr.write(`
+-c    : Configuration file path; defaults to ".frankenstein".
+-b    : Size of blocks files larger than the block size will be split into;
+        saved in the configuration file; defaults to 16M.
+-v    : Verbose output; not enabled by default.
+help  : This help.
+init  : Initialize a configuration file with command-line parameters.
+rip   : Locate files that are too large and split them into blocks.
+stitch: Recombine previously-split files (as determined by the configuration
+        file) into their original form; using this together with a dir
+        argument is an error.
+dir   : A directory to scan for large files recursively (or an individual
+        file); where applicable, defaults to the directory the configuration
+        file is in.
+`.substr(1));
+  if (code !== null) process.exit(code);
 }
 
 function make_config(options, createNew = false) {
@@ -78,6 +99,7 @@ function do_recombine(options) {
 
 function main() {
   const values = minimist(process.argv.slice(2));
+  if (values.help) return help();
   if (values._.length == 0)
     return usage(0);
   const options = {
@@ -88,6 +110,9 @@ function main() {
   };
   const command = values._[0];
   switch (command) {
+    case 'help':
+      help();
+      break;
     case 'init':
       do_init(options);
       break;
