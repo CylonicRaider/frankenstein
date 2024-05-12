@@ -9,7 +9,7 @@ const { GatherStream, SplitStream } = require('./lib/scattergather.js');
 const units = require('./lib/units.js');
 const { escapeRegexInner, waitgroup } = require('./lib/util.js');
 
-/* Configuration / data file */
+/* Configuration / state file */
 class Configuration {
 
   constructor(path) {
