@@ -1,6 +1,6 @@
 {
   "name": "frankenstein",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Frankenstein rips files apart and stiches them back together.",
   "main": "index.js",
   "bin": "./cli.js",
