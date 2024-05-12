@@ -134,7 +134,7 @@ function splitFile(source, destPrefix, blocksize, callback) {
       callback(err);
       return callback(false);
     }
-    fs.stat(source, (err, stats) => {
+    fs.lstat(source, (err, stats) => {
       if (err != null) {
         callback(err);
         return callback(false);
